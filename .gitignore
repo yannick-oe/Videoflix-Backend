@@ -1,0 +1,28 @@
+# Secrets
+.env
+
+# Local environment
+env/
+
+# Container volumes
+media/
+static/
+
+# Reference material
+docs/
+CLAUDE.md
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Tooling
+.ruff_cache/
+.coverage
+htmlcov/
+
+# OS and editor
+.DS_Store
+.idea/
+.vscode/
