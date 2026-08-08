@@ -5,6 +5,7 @@ from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 from auth_app.tokens import activation_token_generator
 
@@ -70,3 +71,20 @@ class RegistrationSerializer(serializers.ModelSerializer):
             "user": {"id": instance.pk, "email": instance.email},
             "token": activation_token_generator.make_token(instance),
         }
+
+
+class LoginSerializer(TokenObtainPairSerializer):
+    """Serializer that authenticates an account by email address."""
+
+    def __init__(self, *args, **kwargs):
+        """Take the email address in place of the username."""
+        super().__init__(*args, **kwargs)
+        del self.fields[self.username_field]
+        self.fields["email"] = NormalizedEmailField(write_only=True)
+
+    def validate(self, attrs):
+        """Authenticate the address and describe the account."""
+        attrs[self.username_field] = attrs["email"]
+        data = super().validate(attrs)
+        data["user"] = {"id": self.user.pk, "username": self.user.username}
+        return data
