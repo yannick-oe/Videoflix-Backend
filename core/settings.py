@@ -1,6 +1,7 @@
 """Django settings for the Videoflix backend."""
 
 import os
+from datetime import timedelta
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -39,6 +40,21 @@ DEFAULT_FROM_EMAIL = os.environ.get(
     "DEFAULT_FROM_EMAIL", "noreply@videoflix.local"
 )
 
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(hours=1),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
+    "ROTATE_REFRESH_TOKENS": True,
+    "BLACKLIST_AFTER_ROTATION": True,
+}
+
+AUTH_ACCESS_COOKIE = "access_token"
+AUTH_REFRESH_COOKIE = "refresh_token"
+AUTH_COOKIE_HTTPONLY = True
+AUTH_COOKIE_SAMESITE = "Lax"
+AUTH_COOKIE_SECURE = (
+    os.environ.get("AUTH_COOKIE_SECURE", "False").lower() == "true"
+)
+
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
@@ -47,6 +63,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "rest_framework",
+    "rest_framework_simplejwt.token_blacklist",
     "django_rq",
     "corsheaders",
     "auth_app",
