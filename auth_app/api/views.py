@@ -8,12 +8,13 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import (
+    TokenBlacklistView,
     TokenObtainPairView,
     TokenRefreshView,
 )
 
 from auth_app.api.serializers import LoginSerializer, RegistrationSerializer
-from auth_app.api.utils import set_auth_cookies
+from auth_app.api.utils import delete_auth_cookies, set_auth_cookies
 from auth_app.tokens import activation_token_generator
 
 ACTIVATION_SUCCESS_MESSAGE = "Account successfully activated."
@@ -21,6 +22,10 @@ ACTIVATION_FAILURE_MESSAGE = "Activation link is invalid or expired."
 LOGIN_SUCCESS_MESSAGE = "Login successful"
 REFRESH_SUCCESS_MESSAGE = "Token refreshed"
 REFRESH_MISSING_MESSAGE = "Refresh token cookie was not sent."
+LOGOUT_SUCCESS_MESSAGE = (
+    "Logout successful! All tokens will be deleted. "
+    "Refresh token is now invalid."
+)
 
 
 class RegistrationView(generics.CreateAPIView):
@@ -80,7 +85,27 @@ class LoginView(TokenObtainPairView):
         return response
 
 
-class RefreshView(TokenRefreshView):
+class RefreshCookieMixin:
+    """Feed the token view the refresh token its cookie carries."""
+
+    def get_serializer(self, *args, **kwargs):
+        """Validate the refresh token the request carries."""
+        kwargs["data"] = {"refresh": self.refresh_token()}
+        return super().get_serializer(*args, **kwargs)
+
+    def refresh_token(self):
+        """Return the refresh token from its cookie or None."""
+        return self.request.COOKIES.get(settings.AUTH_REFRESH_COOKIE)
+
+    def rejection(self):
+        """Return the answer to a request without a refresh cookie."""
+        return Response(
+            {"detail": REFRESH_MISSING_MESSAGE},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+
+class RefreshView(RefreshCookieMixin, TokenRefreshView):
     """Renew the access token the refresh cookie authorizes."""
 
     permission_classes = [AllowAny]
@@ -98,18 +123,24 @@ class RefreshView(TokenRefreshView):
         set_auth_cookies(response, data["access"], data["refresh"])
         return response
 
-    def get_serializer(self, *args, **kwargs):
-        """Validate the refresh token the request carries."""
-        kwargs["data"] = {"refresh": self.refresh_token()}
-        return super().get_serializer(*args, **kwargs)
 
-    def refresh_token(self):
-        """Return the refresh token from its cookie or None."""
-        return self.request.COOKIES.get(settings.AUTH_REFRESH_COOKIE)
+class LogoutView(RefreshCookieMixin, TokenBlacklistView):
+    """Blacklist the refresh token and clear both cookies."""
 
-    def rejection(self):
-        """Return the answer to a request without a refresh cookie."""
-        return Response(
-            {"detail": REFRESH_MISSING_MESSAGE},
-            status=status.HTTP_400_BAD_REQUEST,
+    permission_classes = [AllowAny]
+
+    def post(self, request, *args, **kwargs):
+        """Blacklist the refresh token and report the logout."""
+        if not self.refresh_token():
+            return self.rejection()
+        response = super().post(request, *args, **kwargs)
+        response.data = {"detail": LOGOUT_SUCCESS_MESSAGE}
+        return response
+
+    def finalize_response(self, request, response, *args, **kwargs):
+        """Clear both authentication cookies on every answer."""
+        finalized = super().finalize_response(
+            request, response, *args, **kwargs
         )
+        delete_auth_cookies(finalized)
+        return finalized

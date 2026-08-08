@@ -30,3 +30,9 @@ def set_auth_cookies(response, access, refresh):
         refresh,
         api_settings.REFRESH_TOKEN_LIFETIME,
     )
+
+
+def delete_auth_cookies(response):
+    """Remove the access and refresh cookies from the client."""
+    for name in (settings.AUTH_ACCESS_COOKIE, settings.AUTH_REFRESH_COOKIE):
+        response.delete_cookie(name, samesite=settings.AUTH_COOKIE_SAMESITE)
