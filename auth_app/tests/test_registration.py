@@ -91,10 +91,20 @@ class RegistrationTests(TestCase):
         self.assertEqual(response.status_code, 201)
         self.assertFalse(hasattr(User.objects.get(), "privacy_policy"))
 
-    def test_email_domain_is_normalized(self):
-        """The domain part of the address is stored lowercased."""
+    def test_email_address_is_lowercased(self):
+        """The whole address is stored lowercased."""
         self.register(email="User@EXAMPLE.com")
-        self.assertEqual(User.objects.get().email, "User@example.com")
+        self.assertEqual(User.objects.get().email, EMAIL)
+
+    def test_known_email_is_rejected_regardless_of_case(self):
+        """Addresses differing only in case count as one account."""
+        self.assertEqual(
+            self.register(email="User@Example.com").status_code, 201
+        )
+        response = self.register(email="uSeR@example.COM")
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("email", response.json())
+        self.assertEqual(User.objects.get().email, EMAIL)
 
     def test_mismatched_confirmation_is_rejected(self):
         """A wrong confirmation answers 400 with a JSON body."""

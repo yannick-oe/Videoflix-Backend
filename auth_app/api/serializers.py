@@ -13,12 +13,12 @@ PASSWORD_MISMATCH_MESSAGE = "The passwords do not match."
 
 
 class NormalizedEmailField(serializers.EmailField):
-    """Email field that lowercases the domain of the address."""
+    """Email field that lowercases the whole address."""
 
     def to_internal_value(self, data):
         """Return the normalized address."""
         address = super().to_internal_value(data)
-        return User.objects.normalize_email(address)
+        return User.objects.normalize_email(address).lower()
 
 
 class RegistrationSerializer(serializers.ModelSerializer):
