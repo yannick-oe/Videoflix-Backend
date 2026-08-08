@@ -1,7 +1,9 @@
 """Views of the authentication API."""
 
+import django_rq
 from django.conf import settings
 from django.contrib.auth.models import User
+from django.db import transaction
 from django.utils.http import urlsafe_base64_decode
 from rest_framework import generics, status
 from rest_framework.permissions import AllowAny
@@ -15,6 +17,7 @@ from rest_framework_simplejwt.views import (
 
 from auth_app.api.serializers import LoginSerializer, RegistrationSerializer
 from auth_app.api.utils import delete_auth_cookies, set_auth_cookies
+from auth_app.tasks import deliver_activation_email
 from auth_app.tokens import activation_token_generator
 
 ACTIVATION_SUCCESS_MESSAGE = "Account successfully activated."
@@ -33,6 +36,16 @@ class RegistrationView(generics.CreateAPIView):
 
     serializer_class = RegistrationSerializer
     permission_classes = [AllowAny]
+
+    def perform_create(self, serializer):
+        """Create the account and queue its activation email."""
+        super().perform_create(serializer)
+        user_id = serializer.instance.pk
+        transaction.on_commit(
+            lambda: django_rq.get_queue().enqueue(
+                deliver_activation_email, user_id
+            )
+        )
 
 
 class ActivationView(APIView):
