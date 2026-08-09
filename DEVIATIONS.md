@@ -128,3 +128,25 @@ vergeben gilt.
 
 **Rückbau:** In `queue_activation_email` den `RedisError` durchreichen, sobald
 die Doku für diesen Fehlerfall einen Status nennt.
+
+---
+
+## 2026-08-09 — `400` bei `POST /api/password_confirm/<uidb64>/<token>/`
+
+**Vorgabe:** „200: Passwort erfolgreich geändert." (Endpoint Dokumentation,
+`POST /api/password_confirm/<uidb64>/<token>/`, Status Codes — der einzige
+Eintrag der Tabelle)
+
+**Abweichung:** Ein unbrauchbarer Link — fehlerhafte `uidb64`, `uidb64` ohne
+Konto, ungültiger, bereits verbrauchter oder fremder Token — wird mit `400` und
+`{"detail": "Reset link is invalid or expired."}` beantwortet. Ein abweichendes
+`confirm_password`, ein von `AUTH_PASSWORD_VALIDATORS` abgelehntes
+`new_password` und ein fehlendes Feld werden mit `400` und den Feldfehlern von
+DRF beantwortet.
+
+**Grund:** Ein Reset, der nicht stattgefunden hat, darf nicht wie ein
+erfolgreicher aussehen; die Ursachen eines unbrauchbaren Links teilen sich eine
+Meldung, damit die Antwort nicht verrät, ob zu der `uidb64` ein Konto gehört.
+
+**Rückbau:** Die Fehlerfälle auf den dokumentierten Status umlenken, sobald die
+Doku für diesen Endpunkt einen nennt.
