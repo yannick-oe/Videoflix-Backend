@@ -41,7 +41,9 @@ DEFAULT_FROM_EMAIL = os.environ.get(
 )
 
 REST_FRAMEWORK = {
-    "DEFAULT_AUTHENTICATION_CLASSES": [],
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "auth_app.api.authentication.CookieJWTAuthentication",
+    ],
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
     ],
