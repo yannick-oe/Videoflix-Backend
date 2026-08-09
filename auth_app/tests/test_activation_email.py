@@ -8,12 +8,18 @@ from urllib.parse import parse_qs, urlparse
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.core import mail
-from django.test import TestCase
+from django.test import TestCase, TransactionTestCase
 from django.urls import reverse
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
+from redis.exceptions import ConnectionError as RedisConnectionError
 
-from auth_app.services.activation_email import ACTIVATION_PATH, SUBJECT
+from auth_app.services.activation_email import (
+    ACTIVATION_PATH,
+    SUBJECT,
+    ActivationEmailUnavailable,
+    queue_activation_email,
+)
 from auth_app.tasks import deliver_activation_email
 
 EMAIL = "user@example.com"
@@ -179,3 +185,97 @@ class ActivationEmailTaskTests(TestCase):
         self.user.delete()
         deliver_activation_email(user_id)
         self.assertEqual(mail.outbox, [])
+
+
+class UnreachableQueueTests(TestCase):
+    """Behaviour of the service when the queue refuses the job."""
+
+    def setUp(self):
+        """Create the account whose email cannot reach the queue."""
+        self.user = User.objects.create_user(
+            username=EMAIL, email=EMAIL, password=PASSWORD, is_active=False
+        )
+
+    def queue(self):
+        """Queue the activation email against an unreachable queue."""
+        with patch("django_rq.get_queue") as get_queue:
+            enqueue = get_queue.return_value.enqueue
+            enqueue.side_effect = RedisConnectionError()
+            queue_activation_email(self.user.pk)
+
+    def reject(self):
+        """Queue against the unreachable queue and catch the refusal."""
+        with self.assertRaises(ActivationEmailUnavailable) as caught:
+            self.queue()
+        return caught.exception
+
+    def test_unreachable_queue_is_reported(self):
+        """An unreachable queue raises the refusal of the service."""
+        self.assertIsInstance(self.reject(), ActivationEmailUnavailable)
+
+    def test_refusal_carries_the_service_unavailable_status(self):
+        """The refusal answers 503."""
+        self.assertEqual(self.reject().status_code, 503)
+
+    def test_refusal_carries_a_detail(self):
+        """The refusal names a reason the frontend can display."""
+        self.assertTrue(str(self.reject().detail))
+
+    def test_unreachable_queue_removes_the_account(self):
+        """The account does not survive an unreachable queue."""
+        self.reject()
+        self.assertFalse(User.objects.filter(pk=self.user.pk).exists())
+
+    def test_unreachable_queue_sends_nothing(self):
+        """An unreachable queue delivers no message."""
+        self.reject()
+        self.assertEqual(mail.outbox, [])
+
+    def test_reachable_queue_keeps_the_account(self):
+        """A queued job leaves the account in place."""
+        with patch("django_rq.get_queue"):
+            queue_activation_email(self.user.pk)
+        self.assertTrue(User.objects.filter(pk=self.user.pk).exists())
+
+
+class FailedEnqueueRegistrationTests(TransactionTestCase):
+    """Registration against a queue that refuses the activation job."""
+
+    def register(self, refusal=None):
+        """Register the sample account against the mocked queue."""
+        with patch("django_rq.get_queue") as get_queue:
+            get_queue.return_value.enqueue.side_effect = refusal
+            return self.client.post(
+                reverse("register"),
+                PAYLOAD,
+                content_type="application/json",
+            )
+
+    def rejected_register(self):
+        """Register while the queue refuses the activation job."""
+        return self.register(RedisConnectionError())
+
+    def test_failed_enqueue_answers_service_unavailable(self):
+        """A refused job turns the registration into a 503."""
+        self.assertEqual(self.rejected_register().status_code, 503)
+
+    def test_failed_enqueue_answers_with_a_json_body(self):
+        """The 503 carries the JSON body the frontend reads."""
+        response = self.rejected_register()
+        self.assertIn("application/json", response["Content-Type"])
+        self.assertTrue(response.json()["detail"])
+
+    def test_failed_enqueue_leaves_no_account(self):
+        """No account survives a registration the queue refused."""
+        self.rejected_register()
+        self.assertFalse(User.objects.filter(email=EMAIL).exists())
+
+    def test_failed_enqueue_sends_nothing(self):
+        """A refused registration delivers no message."""
+        self.rejected_register()
+        self.assertEqual(mail.outbox, [])
+
+    def test_address_stays_free_after_a_failed_enqueue(self):
+        """The address registers again once the queue accepts jobs."""
+        self.rejected_register()
+        self.assertEqual(self.register().status_code, 201)
