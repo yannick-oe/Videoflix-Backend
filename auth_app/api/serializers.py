@@ -73,6 +73,12 @@ class RegistrationSerializer(serializers.ModelSerializer):
         }
 
 
+class PasswordResetSerializer(serializers.Serializer):
+    """Serializer that reads the address a reset request names."""
+
+    email = NormalizedEmailField()
+
+
 class LoginSerializer(TokenObtainPairSerializer):
     """Serializer that authenticates an account by email address."""
 

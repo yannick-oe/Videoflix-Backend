@@ -14,9 +14,14 @@ from rest_framework_simplejwt.views import (
     TokenRefreshView,
 )
 
-from auth_app.api.serializers import LoginSerializer, RegistrationSerializer
+from auth_app.api.serializers import (
+    LoginSerializer,
+    PasswordResetSerializer,
+    RegistrationSerializer,
+)
 from auth_app.api.utils import delete_auth_cookies, set_auth_cookies
 from auth_app.services.activation_email import queue_activation_email
+from auth_app.services.password_reset_email import request_password_reset
 from auth_app.tokens import activation_token_generator
 
 ACTIVATION_SUCCESS_MESSAGE = "Account successfully activated."
@@ -28,6 +33,7 @@ LOGOUT_SUCCESS_MESSAGE = (
     "Logout successful! All tokens will be deleted. "
     "Refresh token is now invalid."
 )
+PASSWORD_RESET_MESSAGE = "An email has been sent to reset your password."
 
 
 class RegistrationView(generics.CreateAPIView):
@@ -73,6 +79,20 @@ class ActivationView(APIView):
             {"message": ACTIVATION_FAILURE_MESSAGE},
             status=status.HTTP_400_BAD_REQUEST,
         )
+
+
+class PasswordResetView(generics.GenericAPIView):
+    """Send a reset link without revealing whether an account exists."""
+
+    serializer_class = PasswordResetSerializer
+    permission_classes = [AllowAny]
+
+    def post(self, request, *args, **kwargs):
+        """Queue the reset email if possible and always confirm."""
+        serializer = self.get_serializer(data=request.data)
+        if serializer.is_valid():
+            request_password_reset(serializer.validated_data["email"])
+        return Response({"detail": PASSWORD_RESET_MESSAGE})
 
 
 class LoginView(TokenObtainPairView):
