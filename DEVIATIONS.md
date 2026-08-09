@@ -110,3 +110,21 @@ jedem Fall gelöscht.
 `POST /api/token/refresh/` dem Status „401: Ungültiger Refresh-Token." zu.
 
 **Rückbau:** Den `TokenError` in `LogoutView` abfangen und auf `400` abbilden.
+
+---
+
+## 2026-08-08 — `503` bei `POST /api/register/`
+
+**Vorgabe:** „201: Benutzer erfolgreich erstellt." (Endpoint Dokumentation,
+`POST /api/register/`, Status Codes — der einzige Eintrag der Tabelle)
+
+**Abweichung:** Nimmt die Queue den Auftrag für die Aktivierungs-E-Mail nicht
+an, wird das angelegte Konto wieder entfernt und die Anfrage mit `503` und
+einem JSON-Body beantwortet.
+
+**Grund:** Ein Konto, das ohne zugestellte Aktivierungs-E-Mail bestehen bleibt,
+lässt sich weder aktivieren noch erneut registrieren, weil die Adresse dann als
+vergeben gilt.
+
+**Rückbau:** In `queue_activation_email` den `RedisError` durchreichen, sobald
+die Doku für diesen Fehlerfall einen Status nennt.
