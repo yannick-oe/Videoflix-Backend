@@ -13,6 +13,14 @@ EMAIL_TAKEN_MESSAGE = "This email address is already registered."
 PASSWORD_MISMATCH_MESSAGE = "The passwords do not match."
 
 
+def validate_password_strength(password, user, field):
+    """Raise the field errors Django's validators produce."""
+    try:
+        validate_password(password, user)
+    except DjangoValidationError as error:
+        raise serializers.ValidationError({field: error.messages})
+
+
 class NormalizedEmailField(serializers.EmailField):
     """Email field that lowercases the whole address."""
 
@@ -45,16 +53,9 @@ class RegistrationSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 {"confirmed_password": PASSWORD_MISMATCH_MESSAGE}
             )
-        self._validate_password_strength(attrs)
-        return attrs
-
-    def _validate_password_strength(self, attrs):
-        """Run Django's password validators against the new account."""
         candidate = User(username=attrs["email"], email=attrs["email"])
-        try:
-            validate_password(attrs["password"], candidate)
-        except DjangoValidationError as error:
-            raise serializers.ValidationError({"password": error.messages})
+        validate_password_strength(attrs["password"], candidate, "password")
+        return attrs
 
     def create(self, validated_data):
         """Create the inactive account for the given email address."""
@@ -77,6 +78,31 @@ class PasswordResetSerializer(serializers.Serializer):
     """Serializer that reads the address a reset request names."""
 
     email = NormalizedEmailField()
+
+
+class PasswordConfirmSerializer(serializers.Serializer):
+    """Serializer that sets a new password on the given account."""
+
+    new_password = serializers.CharField(write_only=True)
+    confirm_password = serializers.CharField(write_only=True)
+
+    def validate(self, attrs):
+        """Reject a wrong confirmation or a password Django rejects."""
+        if attrs["new_password"] != attrs["confirm_password"]:
+            raise serializers.ValidationError(
+                {"confirm_password": PASSWORD_MISMATCH_MESSAGE}
+            )
+        validate_password_strength(
+            attrs["new_password"], self.instance, "new_password"
+        )
+        return attrs
+
+    def update(self, instance, validated_data):
+        """Store the new password and activate the account."""
+        instance.set_password(validated_data["new_password"])
+        instance.is_active = True
+        instance.save(update_fields=["password", "is_active"])
+        return instance
 
 
 class LoginSerializer(TokenObtainPairSerializer):

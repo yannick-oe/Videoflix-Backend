@@ -2,6 +2,7 @@
 
 from django.conf import settings
 from django.contrib.auth.models import User
+from django.contrib.auth.tokens import default_token_generator
 from django.db import transaction
 from django.utils.http import urlsafe_base64_decode
 from rest_framework import generics, status
@@ -16,6 +17,7 @@ from rest_framework_simplejwt.views import (
 
 from auth_app.api.serializers import (
     LoginSerializer,
+    PasswordConfirmSerializer,
     PasswordResetSerializer,
     RegistrationSerializer,
 )
@@ -34,6 +36,8 @@ LOGOUT_SUCCESS_MESSAGE = (
     "Refresh token is now invalid."
 )
 PASSWORD_RESET_MESSAGE = "An email has been sent to reset your password."
+PASSWORD_CONFIRM_SUCCESS_MESSAGE = "Your Password has been successfully reset."
+PASSWORD_CONFIRM_FAILURE_MESSAGE = "Reset link is invalid or expired."
 
 
 class RegistrationView(generics.CreateAPIView):
@@ -49,7 +53,19 @@ class RegistrationView(generics.CreateAPIView):
         transaction.on_commit(lambda: queue_activation_email(user_id))
 
 
-class ActivationView(APIView):
+class UidUserMixin:
+    """Resolve the account a base64 encoded user id addresses."""
+
+    def get_user(self, uidb64):
+        """Return the account the uid addresses or None."""
+        try:
+            uid = urlsafe_base64_decode(uidb64).decode()
+            return User.objects.get(pk=uid)
+        except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+            return None
+
+
+class ActivationView(UidUserMixin, APIView):
     """Activate the account a uid and token pair addresses."""
 
     permission_classes = [AllowAny]
@@ -64,14 +80,6 @@ class ActivationView(APIView):
         user.is_active = True
         user.save(update_fields=["is_active"])
         return Response({"message": ACTIVATION_SUCCESS_MESSAGE})
-
-    def get_user(self, uidb64):
-        """Return the account the uid addresses or None."""
-        try:
-            uid = urlsafe_base64_decode(uidb64).decode()
-            return User.objects.get(pk=uid)
-        except (TypeError, ValueError, OverflowError, User.DoesNotExist):
-            return None
 
     def rejection(self):
         """Return the shared answer to every failed activation."""
@@ -93,6 +101,30 @@ class PasswordResetView(generics.GenericAPIView):
         if serializer.is_valid():
             request_password_reset(serializer.validated_data["email"])
         return Response({"detail": PASSWORD_RESET_MESSAGE})
+
+
+class PasswordConfirmView(UidUserMixin, generics.GenericAPIView):
+    """Set a new password for the account a reset link addresses."""
+
+    serializer_class = PasswordConfirmSerializer
+    permission_classes = [AllowAny]
+
+    def post(self, request, uidb64, token):
+        """Reset the addressed password and report the outcome."""
+        user = self.get_user(uidb64)
+        if not default_token_generator.check_token(user, token):
+            return self.rejection()
+        serializer = self.get_serializer(user, data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response({"detail": PASSWORD_CONFIRM_SUCCESS_MESSAGE})
+
+    def rejection(self):
+        """Return the shared answer to every unusable reset link."""
+        return Response(
+            {"detail": PASSWORD_CONFIRM_FAILURE_MESSAGE},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
 
 class LoginView(TokenObtainPairView):
