@@ -130,7 +130,10 @@ class StoredVideoTestCase(TemporaryMediaTestCase):
 
     def entries(self):
         """Return the names below the HLS directory of this video."""
-        return {path.name for path in video_directory(self.video.pk).iterdir()}
+        directory = video_directory(self.video.pk)
+        if not directory.exists():
+            return set()
+        return {path.name for path in directory.iterdir()}
 
 
 class ConversionCommandTests(StoredVideoTestCase):
