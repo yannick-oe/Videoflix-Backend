@@ -1,11 +1,12 @@
 """Signal handlers of the video app."""
 
 from django.db import transaction
-from django.db.models.signals import post_save, pre_save
+from django.db.models.signals import post_delete, post_save, pre_save
 from django.dispatch import receiver
 
 from video_app.models import Video
-from video_app.services.conversion import queue_renditions
+from video_app.services.cleanup import remove_video_files
+from video_app.services.conversion import queue_renditions, video_directory
 from video_app.services.thumbnail import queue_thumbnail
 
 FILE_REPLACED_FLAG = "file_replaced"
@@ -41,3 +42,10 @@ def queue_processing_of_video_file(sender, instance, created, **kwargs):
     video_id = instance.pk
     with_thumbnail = replaced or not instance.thumbnail
     transaction.on_commit(lambda: queue_jobs(video_id, with_thumbnail))
+
+
+@receiver(post_delete, sender=Video)
+def remove_files_of_deleted_video(sender, instance, **kwargs):
+    """Drop the files of this video once its deletion is final."""
+    directory = video_directory(instance.pk)
+    transaction.on_commit(lambda: remove_video_files(instance, directory))
