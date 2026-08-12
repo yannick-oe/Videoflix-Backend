@@ -10,6 +10,8 @@ import django_rq
 from django.conf import settings
 from redis.exceptions import RedisError
 
+from video_app.services.cleanup import remove_if_empty, sweep_staging
+
 FFMPEG_BINARY = "ffmpeg"
 HLS_DIRECTORY = "hls"
 PLAYLIST_NAME = "index.m3u8"
@@ -17,6 +19,7 @@ SEGMENT_PATTERN = "%03d.ts"
 SEGMENT_SECONDS = "4"
 SCALE_WIDTH = "-2"
 CONVERSION_TIMEOUT = 600
+STAGING_LIFETIME = CONVERSION_TIMEOUT * 2
 RENDITIONS = {"480p": "480", "720p": "720", "1080p": "1080"}
 INPUT_OPTIONS = ["-nostdin", "-y"]
 STREAM_OPTIONS = ["-map", "0:v:0", "-map", "0:a:0?"]
@@ -101,11 +104,20 @@ def replace_rendition(staging, destination):
     shutil.move(str(staging), str(destination))
 
 
+def open_staging(parent):
+    """Return a staging directory inside the directory of a video."""
+    parent.mkdir(parents=True, exist_ok=True)
+    try:
+        return tempfile.TemporaryDirectory(dir=parent)
+    except FileNotFoundError:
+        parent.mkdir(parents=True, exist_ok=True)
+        return tempfile.TemporaryDirectory(dir=parent)
+
+
 def build_rendition(video, resolution):
     """Convert this video into the rendition of one resolution."""
     parent = video_directory(video.pk)
-    parent.mkdir(parents=True, exist_ok=True)
-    with tempfile.TemporaryDirectory(dir=parent) as staging:
+    with open_staging(parent) as staging:
         height = RENDITIONS[resolution]
         run_conversion(video.video_file.path, Path(staging), height)
         replace_rendition(staging, parent / resolution)
@@ -113,10 +125,13 @@ def build_rendition(video, resolution):
 
 def create_rendition(video, resolution):
     """Store one HLS rendition of this video or log the failure."""
+    parent = video_directory(video.pk)
+    sweep_staging(parent, STAGING_LIFETIME)
     try:
         build_rendition(video, resolution)
     except RenditionUnavailable:
         logger.exception(CONVERSION_FAILURE_MESSAGE)
+    remove_if_empty(parent)
 
 
 def queue_renditions(video_id):
