@@ -1,19 +1,43 @@
 """Signal handlers of the video app."""
 
 from django.db import transaction
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 
 from video_app.models import Video
+from video_app.services.conversion import queue_renditions
 from video_app.services.thumbnail import queue_thumbnail
+
+FILE_REPLACED_FLAG = "file_replaced"
+
+
+def file_was_replaced(instance):
+    """Tell whether this save puts a new file on a stored video."""
+    stored = Video.objects.filter(pk=instance.pk).first()
+    if stored is None:
+        return False
+    return stored.video_file != instance.video_file
+
+
+def queue_jobs(video_id, with_thumbnail):
+    """Hand the stored video of this id over to the worker."""
+    if with_thumbnail:
+        queue_thumbnail(video_id)
+    queue_renditions(video_id)
+
+
+@receiver(pre_save, sender=Video)
+def remember_replaced_file(sender, instance, **kwargs):
+    """Note on the video whether this save replaces its file."""
+    setattr(instance, FILE_REPLACED_FLAG, file_was_replaced(instance))
 
 
 @receiver(post_save, sender=Video)
-def queue_thumbnail_of_new_video(sender, instance, created, **kwargs):
-    """Queue the frame extraction a stored video still needs."""
-    if not created:
-        return
-    if instance.thumbnail:
+def queue_processing_of_video_file(sender, instance, created, **kwargs):
+    """Queue the jobs the stored video file of this save needs."""
+    replaced = getattr(instance, FILE_REPLACED_FLAG, False)
+    if not created and not replaced:
         return
     video_id = instance.pk
-    transaction.on_commit(lambda: queue_thumbnail(video_id))
+    with_thumbnail = replaced or not instance.thumbnail
+    transaction.on_commit(lambda: queue_jobs(video_id, with_thumbnail))
