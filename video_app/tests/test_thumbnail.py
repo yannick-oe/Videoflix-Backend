@@ -3,7 +3,7 @@
 import subprocess
 import tempfile
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
@@ -50,6 +50,15 @@ def fake_ffmpeg(command, **kwargs):
     return subprocess.CompletedProcess(command, 0)
 
 
+def thumbnail_enqueue(enqueue):
+    """Return a mock holding the frame extraction calls only."""
+    calls = Mock()
+    for call in enqueue.call_args_list:
+        if call.args[0] is generate_thumbnail:
+            calls(*call.args, **call.kwargs)
+    return calls
+
+
 class TemporaryMediaTestCase(TestCase):
     """Media root every test writing a file needs."""
 
@@ -68,11 +77,11 @@ class ThumbnailEnqueueTests(TemporaryMediaTestCase):
     """Storing a video hands the frame extraction to the queue."""
 
     def store(self, **overrides):
-        """Store a video and return the mocked enqueue call."""
+        """Store a video and return its mocked extraction calls."""
         with patch("django_rq.get_queue") as get_queue:
             with self.captureOnCommitCallbacks(execute=True):
                 self.video = create_video(**overrides)
-        return get_queue.return_value.enqueue
+        return thumbnail_enqueue(get_queue.return_value.enqueue)
 
     def test_new_video_queues_one_job(self):
         """Storing a video queues exactly one job."""
@@ -112,7 +121,8 @@ class ThumbnailCommitTests(TestCase):
         with patch("django_rq.get_queue") as get_queue:
             with self.captureOnCommitCallbacks(execute=True):
                 create_video()
-        self.assertEqual(get_queue.return_value.enqueue.call_count, 1)
+        enqueue = thumbnail_enqueue(get_queue.return_value.enqueue)
+        self.assertEqual(enqueue.call_count, 1)
 
 
 class ThumbnailReenqueueTests(TemporaryMediaTestCase):
