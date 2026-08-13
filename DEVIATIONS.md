@@ -150,3 +150,44 @@ Meldung, damit die Antwort nicht verrät, ob zu der `uidb64` ein Konto gehört.
 
 **Rückbau:** Die Fehlerfälle auf den dokumentierten Status umlenken, sobald die
 Doku für diesen Endpunkt einen nennt.
+
+---
+
+## 2026-08-13 — Segment-Route zusätzlich ohne abschließenden Schrägstrich
+
+**Vorgabe:** „`GET /api/video/<int:movie_id>/<str:resolution>/<str:segment>/`"
+(Endpoint Dokumentation, Überschrift des Segment-Endpunkts)
+
+**Abweichung:** Dieselbe View ist zusätzlich ohne abschließenden Schrägstrich
+erreichbar. Die dokumentierte Route bleibt unverändert bestehen; beide Formen
+liefern dieselben Bytes und denselben `Content-Type`.
+
+**Grund:** FFmpeg schreibt blanke Dateinamen wie `000.ts` in die Playlist, die
+der Player relativ zu ihr auflöst; ohne die zweite Route beantwortet
+`APPEND_SLASH` jedes Segment mit einem gemessenen `301` und kostet damit einen
+zusätzlichen Roundtrip pro Segment.
+
+**Rückbau:** Die Route `video-segment-bare` aus `video_app/api/urls.py`
+entfernen.
+
+---
+
+## 2026-08-13 — `401` an den beiden Streaming-Endpunkten
+
+**Vorgabe:** „200: Manifest erfolgreich geliefert." und „404: Video oder
+Manifest nicht gefunden." (Endpoint Dokumentation,
+`GET /api/video/<int:movie_id>/<str:resolution>/index.m3u8`, Status Codes — die
+einzigen Einträge der Tabelle), dazu „200: Segment erfolgreich geliefert." und
+„404: Video oder Segment nicht gefunden." (ebenda, Segment-Endpunkt).
+
+**Abweichung:** Eine Anfrage ohne gültigen `access_token`-Cookie wird an beiden
+Endpunkten mit `401` und `{"detail": "Authentication credentials were not
+provided."}` beantwortet.
+
+**Grund:** Beide Abschnitte verlangen „Permissions: JWT-Authentifizierung
+erforderlich", nennen für deren Fehlen aber keinen Status; dasselbe Dokument
+ordnet ihn am Schwesterendpunkt `GET /api/video/` als „401: Nicht
+authentifiziert." zu.
+
+**Rückbau:** Die Fehlerfälle auf den dokumentierten Status umlenken, sobald die
+Doku für diese Endpunkte einen nennt.
