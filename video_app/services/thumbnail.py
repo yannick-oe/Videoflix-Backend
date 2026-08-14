@@ -9,6 +9,8 @@ import django_rq
 from django.core.files import File
 from redis.exceptions import RedisError
 
+from video_app.services.cleanup import remove_replaced_file_on_commit
+
 FFMPEG_BINARY = "ffmpeg"
 FRAME_POSITION = "00:00:01"
 FRAME_QUALITY = "2"
@@ -53,9 +55,13 @@ def extract_frame(source, destination):
 
 def store_thumbnail(video, frame):
     """Attach the frame at this path to the video as its thumbnail."""
+    previous = video.thumbnail.name
     with frame.open("rb") as content:
         video.thumbnail.save(frame.name, File(content), save=False)
     video.save(update_fields=["thumbnail"])
+    remove_replaced_file_on_commit(
+        video.thumbnail.storage, previous, video.thumbnail.name
+    )
 
 
 def extract_thumbnail(video):

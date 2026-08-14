@@ -5,6 +5,8 @@ import shutil
 import tempfile
 import time
 
+from django.db import transaction
+
 STAGING_PATTERN = f"{tempfile.gettempprefix()}*"
 
 
@@ -13,6 +15,19 @@ def remove_video_files(video, directory):
     shutil.rmtree(directory, ignore_errors=True)
     video.video_file.delete(save=False)
     video.thumbnail.delete(save=False)
+
+
+def remove_replaced_file(storage, previous, current):
+    """Drop the file a replacement pushed aside, if it holds one."""
+    if previous and previous != current:
+        storage.delete(previous)
+
+
+def remove_replaced_file_on_commit(storage, previous, current):
+    """Drop the replaced file once the row replacing it holds."""
+    transaction.on_commit(
+        lambda: remove_replaced_file(storage, previous, current)
+    )
 
 
 def remove_if_empty(directory):

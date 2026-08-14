@@ -5,19 +5,22 @@ from django.db.models.signals import post_delete, post_save, pre_save
 from django.dispatch import receiver
 
 from video_app.models import Video
-from video_app.services.cleanup import remove_video_files
+from video_app.services.cleanup import (
+    remove_replaced_file_on_commit,
+    remove_video_files,
+)
 from video_app.services.conversion import queue_renditions, video_directory
 from video_app.services.thumbnail import queue_thumbnail
 
-FILE_REPLACED_FLAG = "file_replaced"
+FILE_REPLACED_FLAG = "replaced_file_name"
 
 
-def file_was_replaced(instance):
-    """Tell whether this save puts a new file on a stored video."""
+def replaced_file_name(instance):
+    """Return the name of the file this save pushes off a video."""
     stored = Video.objects.filter(pk=instance.pk).first()
-    if stored is None:
-        return False
-    return stored.video_file != instance.video_file
+    if stored is None or stored.video_file == instance.video_file:
+        return ""
+    return stored.video_file.name
 
 
 def queue_jobs(video_id, with_thumbnail):
@@ -29,19 +32,22 @@ def queue_jobs(video_id, with_thumbnail):
 
 @receiver(pre_save, sender=Video)
 def remember_replaced_file(sender, instance, **kwargs):
-    """Note on the video whether this save replaces its file."""
-    setattr(instance, FILE_REPLACED_FLAG, file_was_replaced(instance))
+    """Note on the video which file this save pushes aside."""
+    setattr(instance, FILE_REPLACED_FLAG, replaced_file_name(instance))
 
 
 @receiver(post_save, sender=Video)
 def queue_processing_of_video_file(sender, instance, created, **kwargs):
     """Queue the jobs the stored video file of this save needs."""
-    replaced = getattr(instance, FILE_REPLACED_FLAG, False)
+    replaced = getattr(instance, FILE_REPLACED_FLAG, "")
     if not created and not replaced:
         return
     video_id = instance.pk
-    with_thumbnail = replaced or not instance.thumbnail
+    with_thumbnail = bool(replaced) or not instance.thumbnail
     transaction.on_commit(lambda: queue_jobs(video_id, with_thumbnail))
+    remove_replaced_file_on_commit(
+        instance.video_file.storage, replaced, instance.video_file.name
+    )
 
 
 @receiver(post_delete, sender=Video)
