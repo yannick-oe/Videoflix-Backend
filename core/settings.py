@@ -143,6 +143,10 @@ RQ_QUEUES = {
     }
 }
 
+RQ = {
+    "WORKER_CLASS": "core.workers.SchedulingWorker",
+}
+
 AUTH_PASSWORD_VALIDATORS = [
     {
         "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",

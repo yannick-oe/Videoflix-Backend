@@ -13,6 +13,8 @@ from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 from redis.exceptions import RedisError
 
+from auth_app.services.email_retry import EMAIL_RETRY
+
 CONFIRM_PATH = "/pages/auth/confirm_password.html"
 SUBJECT = "Reset your password"
 TEMPLATE = "auth_app/email/password_reset"
@@ -50,7 +52,9 @@ def queue_password_reset_email(user_id):
     from auth_app.tasks import deliver_password_reset_email
 
     try:
-        django_rq.get_queue().enqueue(deliver_password_reset_email, user_id)
+        django_rq.get_queue().enqueue(
+            deliver_password_reset_email, user_id, retry=EMAIL_RETRY
+        )
     except RedisError:
         logger.exception(ENQUEUE_FAILURE_MESSAGE)
 

@@ -13,6 +13,7 @@ from redis.exceptions import RedisError
 from rest_framework import status
 from rest_framework.exceptions import APIException
 
+from auth_app.services.email_retry import EMAIL_RETRY
 from auth_app.tokens import activation_token_generator
 
 ACTIVATION_PATH = "/pages/auth/activate.html"
@@ -65,7 +66,9 @@ def queue_activation_email(user_id):
     from auth_app.tasks import deliver_activation_email
 
     try:
-        django_rq.get_queue().enqueue(deliver_activation_email, user_id)
+        django_rq.get_queue().enqueue(
+            deliver_activation_email, user_id, retry=EMAIL_RETRY
+        )
     except RedisError as error:
         User.objects.filter(pk=user_id).delete()
         raise ActivationEmailUnavailable() from error
