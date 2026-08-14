@@ -27,7 +27,7 @@ URL_PATTERN = r"https?://[^\s\"<>]+"
 
 def run_at_once(function, *args, **kwargs):
     """Run a queued job in place of the worker."""
-    return function(*args, **kwargs)
+    return function(*args)
 
 
 class ResetFlowTests(TestCase):

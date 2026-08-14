@@ -20,6 +20,7 @@ from auth_app.services.activation_email import (
     ActivationEmailUnavailable,
     queue_activation_email,
 )
+from auth_app.services.email_retry import EMAIL_RETRY
 from auth_app.tasks import deliver_activation_email
 
 EMAIL = "user@example.com"
@@ -71,7 +72,9 @@ class ActivationEmailEnqueueTests(TestCase):
     def test_queued_job_is_the_activation_email(self):
         """The queued job delivers the activation email."""
         self.register().assert_called_once_with(
-            deliver_activation_email, User.objects.get().pk
+            deliver_activation_email,
+            User.objects.get().pk,
+            retry=EMAIL_RETRY,
         )
 
     def test_queued_argument_is_the_account_id(self):

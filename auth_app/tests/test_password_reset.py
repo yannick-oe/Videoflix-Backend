@@ -16,6 +16,7 @@ from django.utils.http import urlsafe_base64_encode
 from redis.exceptions import ConnectionError as RedisConnectionError
 
 from auth_app.api.views import PASSWORD_RESET_MESSAGE
+from auth_app.services.email_retry import EMAIL_RETRY
 from auth_app.services.password_reset_email import (
     CONFIRM_PATH,
     ENQUEUE_FAILURE_MESSAGE,
@@ -127,7 +128,7 @@ class PasswordResetEnqueueTests(TestCase):
     def test_queued_job_is_the_reset_email(self):
         """The queued job delivers the password reset email."""
         self.post({"email": EMAIL}).assert_called_once_with(
-            deliver_password_reset_email, self.user.pk
+            deliver_password_reset_email, self.user.pk, retry=EMAIL_RETRY
         )
 
     def test_queued_argument_is_the_account_id(self):
@@ -138,7 +139,7 @@ class PasswordResetEnqueueTests(TestCase):
     def test_uppercase_address_reaches_the_account(self):
         """An address in capitals addresses the same account."""
         self.post({"email": EMAIL.upper()}).assert_called_once_with(
-            deliver_password_reset_email, self.user.pk
+            deliver_password_reset_email, self.user.pk, retry=EMAIL_RETRY
         )
 
     def test_unknown_address_enqueues_nothing(self):
