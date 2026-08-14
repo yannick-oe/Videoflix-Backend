@@ -59,6 +59,11 @@ def video_directory(video_id):
     return Path(settings.MEDIA_ROOT) / HLS_DIRECTORY / str(video_id)
 
 
+def discard_renditions(video_id):
+    """Remove every rendition a video left in its directory."""
+    shutil.rmtree(video_directory(video_id), ignore_errors=True)
+
+
 def output_options(destination, height):
     """Return the options that shape and place one rendition."""
     return [
