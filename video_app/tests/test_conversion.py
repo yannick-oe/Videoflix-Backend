@@ -21,10 +21,14 @@ from video_app.services.conversion import (
     SEGMENT_SECONDS,
     video_directory,
 )
+from video_app.services.thumbnail import (
+    ENQUEUE_FAILURE_MESSAGE as THUMBNAIL_ENQUEUE_MESSAGE,
+)
 from video_app.tasks import generate_rendition
 from video_app.tests.test_thumbnail import TemporaryMediaTestCase, create_video
 
 LOGGER = "video_app.services.conversion"
+THUMBNAIL_LOGGER = "video_app.services.thumbnail"
 VIDEO_NAME = "clip.mp4"
 VIDEO_CONTENT = b"source bytes"
 THUMBNAIL_NAME = "cover.jpg"
@@ -92,9 +96,14 @@ class ConversionEnqueueFailureTests(TestCase):
 
     def store_with_broken_queue(self):
         """Store a video while the queue rejects every connection."""
-        with patch("django_rq.get_queue", side_effect=RedisConnectionError):
-            with self.captureOnCommitCallbacks(execute=True):
-                return create_video()
+        with self.assertLogs(THUMBNAIL_LOGGER, level="ERROR") as logs:
+            with patch(
+                "django_rq.get_queue", side_effect=RedisConnectionError
+            ):
+                with self.captureOnCommitCallbacks(execute=True):
+                    video = create_video()
+        self.assertIn(THUMBNAIL_ENQUEUE_MESSAGE, logs.output[0])
+        return video
 
     def test_the_lost_jobs_are_logged(self):
         """An unreachable queue leaves an error in the log."""

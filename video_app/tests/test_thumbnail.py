@@ -10,6 +10,9 @@ from django.test import TestCase, override_settings
 from redis.exceptions import ConnectionError as RedisConnectionError
 
 from video_app.models import Video
+from video_app.services.conversion import (
+    ENQUEUE_FAILURE_MESSAGE as CONVERSION_ENQUEUE_MESSAGE,
+)
 from video_app.services.thumbnail import (
     ENQUEUE_FAILURE_MESSAGE,
     EXTRACTION_FAILURE_MESSAGE,
@@ -20,6 +23,7 @@ from video_app.services.thumbnail import (
 from video_app.tasks import generate_thumbnail
 
 LOGGER = "video_app.services.thumbnail"
+CONVERSION_LOGGER = "video_app.services.conversion"
 TITLE = "Movie Title"
 NEW_TITLE = "Corrected Title"
 DESCRIPTION = "Movie Description"
@@ -171,9 +175,14 @@ class ThumbnailEnqueueFailureTests(TestCase):
 
     def store_with_broken_queue(self):
         """Store a video while the queue rejects every connection."""
-        with patch("django_rq.get_queue", side_effect=RedisConnectionError):
-            with self.captureOnCommitCallbacks(execute=True):
-                return create_video()
+        with self.assertLogs(CONVERSION_LOGGER, level="ERROR") as logs:
+            with patch(
+                "django_rq.get_queue", side_effect=RedisConnectionError
+            ):
+                with self.captureOnCommitCallbacks(execute=True):
+                    video = create_video()
+        self.assertIn(CONVERSION_ENQUEUE_MESSAGE, logs.output[0])
+        return video
 
     def test_the_lost_job_is_logged(self):
         """An unreachable queue leaves an error in the log."""

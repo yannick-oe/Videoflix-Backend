@@ -11,6 +11,8 @@ from django.urls import clear_url_caches
 import core.urls
 from core.urls import THUMBNAIL_URL
 
+REQUEST_LOGGER = "django.request"
+SECURITY_LOGGER = "django.security.SuspiciousFileOperation"
 THUMBNAIL_NAME = "poster.jpg"
 THUMBNAIL_CONTENT = b"frame bytes"
 VIDEO_NAME = "clip.mp4"
@@ -73,13 +75,19 @@ class ThumbnailRouteTests(SimpleTestCase):
 
     def test_absent_thumbnail_answers_404(self):
         """A thumbnail that was never stored answers 404."""
-        response = self.get(f"{THUMBNAIL_URL}{MISSING_NAME}")
+        with self.assertLogs(REQUEST_LOGGER, level="WARNING") as logs:
+            response = self.get(f"{THUMBNAIL_URL}{MISSING_NAME}")
         self.assertEqual(response.status_code, 404)
+        self.assertIn(MISSING_NAME, logs.output[0])
 
     def test_video_directory_is_out_of_reach(self):
         """A source file below videos/ has no route at all."""
-        self.assertEqual(self.get(VIDEO_URL).status_code, 404)
+        with self.assertLogs(REQUEST_LOGGER, level="WARNING") as logs:
+            self.assertEqual(self.get(VIDEO_URL).status_code, 404)
+        self.assertIn(VIDEO_URL, logs.output[0])
 
     def test_climbing_out_of_the_thumbnail_directory_fails(self):
         """A path leaving the thumbnail directory is refused."""
-        self.assertEqual(self.get(TRAVERSAL_URL).status_code, 400)
+        with self.assertLogs(SECURITY_LOGGER, level="ERROR") as logs:
+            self.assertEqual(self.get(TRAVERSAL_URL).status_code, 400)
+        self.assertIn(VIDEO_NAME, logs.output[0])
