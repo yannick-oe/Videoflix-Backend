@@ -132,7 +132,7 @@ class ActivationEmailTaskTests(TestCase):
         )
 
     def test_message_carries_the_designed_subject(self):
-        """The subject is the one of the delivered design."""
+        """The subject is the one the service defines."""
         self.assertEqual(self.message().subject, SUBJECT)
 
     def test_message_carries_a_plain_text_body(self):

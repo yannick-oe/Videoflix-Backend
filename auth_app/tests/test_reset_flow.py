@@ -34,7 +34,7 @@ class ResetFlowTests(TestCase):
     """One client walks a lost password from registration to login."""
 
     def setUp(self):
-        """Let every queued job run at once instead of a worker."""
+        """Let every queued job run at once."""
         patcher = patch("django_rq.get_queue")
         get_queue = patcher.start()
         self.addCleanup(patcher.stop)

@@ -25,7 +25,7 @@ class EmailRetryPolicyTests(TestCase):
     """The shape of the policy every email job carries."""
 
     def test_the_policy_grants_more_than_one_attempt(self):
-        """A failed send is tried again instead of being dropped."""
+        """A failed send is tried again."""
         self.assertGreater(EMAIL_RETRY.max, 0)
 
     def test_every_attempt_has_its_own_interval(self):
