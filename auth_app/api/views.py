@@ -19,6 +19,7 @@ from auth_app.api.serializers import (
     LoginSerializer,
     PasswordConfirmSerializer,
     PasswordResetSerializer,
+    RefreshSerializer,
     RegistrationSerializer,
 )
 from auth_app.api.utils import delete_auth_cookies, set_auth_cookies
@@ -168,6 +169,7 @@ class RefreshCookieMixin:
 class RefreshView(RefreshCookieMixin, TokenRefreshView):
     """Renew the access token the refresh cookie authorizes."""
 
+    serializer_class = RefreshSerializer
     permission_classes = [AllowAny]
 
     def post(self, request, *args, **kwargs):

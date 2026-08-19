@@ -4,8 +4,12 @@ from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import serializers
+from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.validators import UniqueValidator
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework_simplejwt.serializers import (
+    TokenObtainPairSerializer,
+    TokenRefreshSerializer,
+)
 
 from auth_app.tokens import activation_token_generator
 
@@ -120,3 +124,17 @@ class LoginSerializer(TokenObtainPairSerializer):
         data = super().validate(attrs)
         data["user"] = {"id": self.user.pk, "username": self.user.username}
         return data
+
+
+class RefreshSerializer(TokenRefreshSerializer):
+    """Serializer that rejects a token whose account is gone."""
+
+    def validate(self, attrs):
+        """Renew the access token of an account that still exists."""
+        try:
+            return super().validate(attrs)
+        except User.DoesNotExist as error:
+            raise AuthenticationFailed(
+                self.error_messages["no_active_account"],
+                "no_active_account",
+            ) from error
