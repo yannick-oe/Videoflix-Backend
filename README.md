@@ -229,6 +229,49 @@ job would be scheduled but never picked up.
 
 Queue and workers can be watched in the admin under `django-rq`.
 
+## Postman collection
+
+Two files below `postman/`:
+
+| File | Holds |
+|---|---|
+| `Videoflix.postman_collection.json` | 24 requests in eight folders |
+| `Videoflix.postman_environment.json` | `base_url` and `video_id` |
+
+Import both, select **Videoflix Local** as the active environment and run the
+collection. The same run from the command line:
+
+```bash
+npx newman run postman/Videoflix.postman_collection.json \
+  -e postman/Videoflix.postman_environment.json
+```
+
+`base_url` is `http://127.0.0.1:8000` and not `http://localhost:8000`, for the
+reason given under
+[Running the delivered frontend](#running-the-delivered-frontend).
+
+Every request asserts the status code it expects. Authentication is the cookie
+jar of Postman and nothing else; no request carries an `Authorization` header.
+The folders are numbered because that jar carries state: the unauthenticated
+cases run while it is still empty, the login fills it, and the logout at the
+end empties it again.
+
+**The collection can be run a second time without a reset.** Each run
+registers an account of its own under an address built from a timestamp and
+activates it with the token of the registration response, so no
+`docker compose down -v` and no manual cleanup is needed between runs.
+
+`video_id` ships empty, and the two requests of folder 6 then skip their
+assertions, which is what a clone without an uploaded video needs. Set it to
+the id of a converted video and the two check the `200` of that video's
+manifest and of its first segment instead.
+
+**A run sends two emails** through the SMTP server `.env` points at: the
+activation email of the registration and the reset email of folder 7. The
+password confirmation has no reachable success path from a runner, because its
+token leaves the system by email only, so the collection checks the rejected
+link.
+
 ## Tests
 
 ```bash
