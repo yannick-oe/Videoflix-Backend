@@ -299,7 +299,7 @@ docker compose exec web coverage run manage.py test
 docker compose exec web coverage report
 ```
 
-The suite holds **424 tests**. It runs without network, worker, SMTP or
+The suite holds **428 tests**. It runs without network, worker, SMTP or
 FFmpeg: the external program and the queue call are mocked, emails go to the
 in-memory backend and files into a temporary `MEDIA_ROOT`. Coverage is
 enforced at **100 %** by `fail_under = 100` in `pyproject.toml`.
@@ -315,7 +315,7 @@ container by a single RQ worker.
 | 480p rendition | 36.48 s |
 | 720p rendition | 38.35 s |
 | 1080p rendition | 50.31 s |
-| Test suite (424 tests) | 49.21 s |
+| Test suite (428 tests) | 49.33 s |
 
 ## Known limitations
 
