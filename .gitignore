@@ -21,6 +21,7 @@ __pycache__/
 .ruff_cache/
 .coverage
 htmlcov/
+.claude/
 
 # OS and editor
 .DS_Store
