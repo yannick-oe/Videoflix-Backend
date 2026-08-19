@@ -15,6 +15,7 @@ from auth_app.tokens import activation_token_generator
 
 EMAIL_TAKEN_MESSAGE = "This email address is already registered."
 PASSWORD_MISMATCH_MESSAGE = "The passwords do not match."
+USERNAME_MAX_LENGTH = User._meta.get_field("username").max_length
 
 
 def validate_password_strength(password, user, field):
@@ -38,11 +39,12 @@ class RegistrationSerializer(serializers.ModelSerializer):
     """Serializer that creates an inactive account from an email."""
 
     email = NormalizedEmailField(
+        max_length=USERNAME_MAX_LENGTH,
         validators=[
             UniqueValidator(
                 queryset=User.objects.all(), message=EMAIL_TAKEN_MESSAGE
             )
-        ]
+        ],
     )
     password = serializers.CharField(write_only=True)
     confirmed_password = serializers.CharField(write_only=True)

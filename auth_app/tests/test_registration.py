@@ -6,6 +6,7 @@ from django.contrib.auth.models import User
 from django.test import TestCase
 from django.urls import reverse
 
+from auth_app.api.serializers import USERNAME_MAX_LENGTH
 from auth_app.tokens import activation_token_generator
 
 EMAIL = "user@example.com"
@@ -129,6 +130,14 @@ class RegistrationTests(TestCase):
     def test_malformed_email_is_rejected(self):
         """An address without a domain answers 400."""
         response = self.register(email="not-an-email")
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("email", response.json())
+
+    def test_over_length_email_is_rejected(self):
+        """An address longer than the username column answers 400."""
+        domain = "@example.com"
+        local = "a" * (USERNAME_MAX_LENGTH - len(domain) + 1)
+        response = self.register(email=local + domain)
         self.assertEqual(response.status_code, 400)
         self.assertIn("email", response.json())
 
