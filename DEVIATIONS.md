@@ -40,24 +40,6 @@ diesen Endpunkt einen anderen Fehlerfall vorschreibt.
 
 ---
 
-## 2026-08-08 — Response-Body des `400` bei `GET /api/activate/<uidb64>/<token>/`
-
-**Vorgabe:** „400: Aktivierung fehlgeschlagen." (Endpoint Dokumentation,
-`GET /api/activate/<uidb64>/<token>/`, Status Codes) — die Doku nennt für
-diesen Status keinen Body.
-
-**Abweichung:** Die Antwort trägt
-`{"message": "Activation link is invalid or expired."}`.
-
-**Grund:** Der Schlüssel folgt dem dokumentierten Erfolgs-Body
-`{"message": "Account successfully activated."}`, den das Frontend als
-`result.message` ausliest.
-
-**Rückbau:** Den Body ersetzen, sobald die Doku für den Fehlerfall einen
-eigenen vorgibt.
-
----
-
 ## 2026-08-08 — `401` und `400` bei `POST /api/login/`
 
 **Vorgabe:** „200: Login erfolgreich." (Endpoint Dokumentation,
