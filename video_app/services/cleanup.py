@@ -1,6 +1,7 @@
 """Removal of the files a video leaves behind on disk."""
 
 import contextlib
+import logging
 import shutil
 import tempfile
 import time
@@ -8,19 +9,34 @@ import time
 from django.db import transaction
 
 STAGING_PATTERN = f"{tempfile.gettempprefix()}*"
+REMOVAL_FAILURE_MESSAGE = "A file of a video could not be removed."
+
+logger = logging.getLogger(__name__)
+
+
+def discard_file(stored):
+    """Drop this stored file, logging a removal that cannot finish."""
+    try:
+        stored.delete(save=False)
+    except OSError:
+        logger.exception(REMOVAL_FAILURE_MESSAGE)
 
 
 def remove_video_files(video, directory):
     """Drop the renditions, the source and the frame of a video."""
     shutil.rmtree(directory, ignore_errors=True)
-    video.video_file.delete(save=False)
-    video.thumbnail.delete(save=False)
+    discard_file(video.video_file)
+    discard_file(video.thumbnail)
 
 
 def remove_replaced_file(storage, previous, current):
     """Drop the file a replacement pushed aside, if it holds one."""
-    if previous and previous != current:
+    if not previous or previous == current:
+        return
+    try:
         storage.delete(previous)
+    except OSError:
+        logger.exception(REMOVAL_FAILURE_MESSAGE)
 
 
 def remove_replaced_file_on_commit(storage, previous, current):
