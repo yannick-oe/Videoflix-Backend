@@ -174,3 +174,25 @@ authentifiziert." zu.
 
 **Rückbau:** Die Fehlerfälle auf den dokumentierten Status umlenken, sobald die
 Doku für diese Endpunkte einen nennt.
+
+---
+
+## 2026-08-19 — Drei geänderte Einträge in `settings.py`
+
+**Vorgabe:** „Bitte ändere nichts, an den im weiteren Verlauf, angegebenen
+Einträgen in der `settings.py`." (Videoflix — Docker Setup, Abschnitt
+„Quickstart")
+
+**Abweichung:** In `RQ_QUEUES` fehlt `REDIS_CLIENT_KWARGS`, und `PORT` und `DB`
+sind in `int()` gefasst; die `os.environ.get`-Aufrufe in `DATABASES` tragen
+keine Vorgabewerte mehr; `SECRET_KEY` hat einen anderen Rückfallwert.
+
+**Grund:** Die Vorgabewerte der Vorlage sind veröffentlichte Platzhalter, die
+als Datenbank-Zugangsdaten und als `SECRET_KEY` in einem öffentlichen
+Repository ein fehlendes `.env` still statt laut scheitern ließen, während
+`REDIS_CLIENT_KWARGS` ein leeres Dict ist, das django-rq ohnehin selbst
+einsetzt, und `int()` `PORT` und `DB` auf den Typ der gelieferten Vorgabewerte
+festlegt.
+
+**Rückbau:** Die drei Blöcke wörtlich so wiederherstellen, wie das Material sie
+angibt.
