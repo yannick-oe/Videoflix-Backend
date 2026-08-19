@@ -27,7 +27,7 @@ CORS_ALLOWED_ORIGINS = os.environ.get(
 CORS_ALLOW_CREDENTIALS = True
 
 FRONTEND_BASE_URL = os.environ.get(
-    "FRONTEND_BASE_URL", "http://localhost:5500"
+    "FRONTEND_BASE_URL", "http://127.0.0.1:5500"
 )
 
 EMAIL_HOST = os.environ.get("EMAIL_HOST", "localhost")
