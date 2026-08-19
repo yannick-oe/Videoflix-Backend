@@ -165,7 +165,9 @@ The tokens live only in HttpOnly cookies named `access_token` and
 `refresh_token`. The API reads no `Authorization` header anywhere, and the
 response bodies that carry a token do so for information only.
 
-- Access token lifetime: **1 hour**. Refresh token lifetime: **1 day**.
+- Access token lifetime: **1 hour**. Refresh token lifetime: **1 day**, which
+  is SimpleJWT's own default; settings that only repeat a library default are
+  not declared in `settings.py`.
 - Refresh tokens rotate, and the rotated one is blacklisted. A refresh
   therefore renews both cookies.
 - Logout blacklists the refresh token and clears both cookies.
@@ -207,6 +209,11 @@ HTTP only through the two authenticated streaming views, which resolve the
 path against the rendition directory and stream the file. Only
 `media/thumbnails/` is served statically, which is what makes the absolute
 `thumbnail_url` of the video list work in the browser.
+
+`STORAGES` names the `default` backend as well as the `staticfiles` one even
+though `default` carries Django's own value, because the setting replaces the
+default dictionary instead of merging into it and `StorageHandler` raises
+`InvalidStorageError` for an alias the dictionary does not name.
 
 `media/` is a named volume and overlays the mounted project directory, so
 uploaded and generated files are invisible on the host. Inspect them in the
@@ -299,17 +306,16 @@ enforced at **100 %** by `fail_under = 100` in `pyproject.toml`.
 
 ## Measured performance
 
-Sample: a 12-second 640x360 clip processed in the Alpine container with a
-single RQ worker, unless noted otherwise.
+Sample: a 525 MiB, 91.4-second 3840x2160 HEVC source converted in the Alpine
+container by a single RQ worker.
 
 | Step | Time |
 |---|---|
-| Thumbnail extraction | ~0.10 s |
-| 480p rendition | ~0.28 s |
-| 720p rendition | ~0.48 s |
-| 1080p rendition | ~1.16 s |
-| 480p rendition of a 1 GB 4K `.MOV` | ~62 s |
-| Test suite (424 tests) | 49.3 s |
+| Thumbnail extraction | 0.64 s |
+| 480p rendition | 36.48 s |
+| 720p rendition | 38.35 s |
+| 1080p rendition | 50.31 s |
+| Test suite (424 tests) | 49.21 s |
 
 ## Known limitations
 
