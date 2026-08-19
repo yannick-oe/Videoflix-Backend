@@ -55,11 +55,17 @@ the project.
    ```
 
 3. Fill in the values in `.env`. The database name, user and password, the
-   superuser credentials and the SMTP credentials have placeholder values in
-   the template and have to be replaced. `SECRET_KEY` should be replaced by a
-   freshly generated key. The remaining variables work as delivered for a
-   local run. Every variable is listed under
-   [Environment variables](#environment-variables).
+   superuser credentials, the SMTP credentials and `DEFAULT_FROM_EMAIL`, which
+   the template ships as `default_from_email` and not as an address, have
+   placeholder values and have to be replaced. `SECRET_KEY` should be replaced
+   by a freshly generated key, which this command prints:
+
+   ```bash
+   LC_ALL=C tr -dc 'A-Za-z0-9' < /dev/urandom | head -c 50
+   ```
+
+   The remaining variables work as delivered for a local run. Every variable
+   is listed under [Environment variables](#environment-variables).
 
 4. Build the images and start the stack.
 
@@ -345,16 +351,40 @@ container by a single RQ worker.
 - A worker killed mid-conversion can leave an orphan rendition tree behind.
   The next conversion of that video replaces it, but a video deleted in the
   meantime does not.
+- Replacing the file of a video in the admin while its conversion runs leaves
+  the three resolutions on two sources for a while: the rendition already in
+  flight finishes from the old file, the ones still queued read the new row.
+  The same save queues a fresh set of renditions that overwrites the mixture,
+  at the cost of one extra conversion pass.
 - Upload validation checks the file extension, not the content of the file. A
   mislabelled file passes validation and reaches FFmpeg, which then fails the
   conversion.
 - If all three delivery attempts of an activation email fail, the account
   stays inactive while its address counts as taken, so the same address cannot
-  be registered again. The password reset is the recovery path, because it
-  activates the account as well.
-- With `DEBUG=False`, `static()` returns an empty list of routes and the
-  thumbnails are no longer served. A real deployment needs a static and media
-  server in front of the application.
+  be registered again. Two paths activate it without a delivered email. The
+  first is the response of `POST /api/register/`, which carries the activation
+  token in its body beside the `id` of the new account; the `<uidb64>` of the
+  activation route is that id, base64url encoded with the padding stripped:
+
+  ```bash
+  docker compose exec web python -c "from django.utils.http import urlsafe_base64_encode; from django.utils.encoding import force_bytes; print(urlsafe_base64_encode(force_bytes(3)))"
+  ```
+
+  For the id `3` that prints `Mw`, and `GET /api/activate/Mw/<token>/` then
+  answers `200`. The second path is the admin, where ticking `is_active` on
+  the user activates the account directly. A completed password reset sets the
+  account active as well.
+- Under the delivered `DEBUG=True`, an unhandled `500` renders Django's
+  technical error page. Its cleanser masks by setting name and does not reach
+  the frame locals of psycopg2, so the database password stands in clear on
+  that page. `DEBUG=False` answers the same request with a short page that
+  leaks nothing, which is what anything beyond a local run needs.
+- With `DEBUG=False`, `static()` returns an empty list of routes and
+  `media/thumbnails/` is no longer served. WhiteNoise keeps serving `/static/`,
+  so the admin still renders completely. `GET /api/video/` goes on returning
+  `thumbnail_url` as an absolute URL, which then answers `404` and leaves every
+  tile of the frontend a broken image. A real deployment needs a media server
+  in front of the application.
 - A video is listed by `GET /api/video/` as soon as the admin saves it, before
   its conversion has finished. Until the three renditions are written — 125.14 s
   for the sample of the performance table — its `thumbnail_url` is `null` and
