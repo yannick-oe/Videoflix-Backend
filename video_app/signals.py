@@ -13,10 +13,18 @@ from video_app.services.conversion import queue_renditions, video_directory
 from video_app.services.thumbnail import queue_thumbnail
 
 FILE_REPLACED_FLAG = "replaced_file_name"
+SOURCE_FIELD = "video_file"
 
 
-def replaced_file_name(instance):
+def writes_source(update_fields):
+    """Tell whether this save writes the source file of a video."""
+    return update_fields is None or SOURCE_FIELD in update_fields
+
+
+def replaced_file_name(instance, update_fields):
     """Return the name of the file this save pushes off a video."""
+    if not writes_source(update_fields):
+        return ""
     stored = Video.objects.filter(pk=instance.pk).first()
     if stored is None or stored.video_file == instance.video_file:
         return ""
@@ -31,9 +39,13 @@ def queue_jobs(video_id, with_thumbnail):
 
 
 @receiver(pre_save, sender=Video)
-def remember_replaced_file(sender, instance, **kwargs):
+def remember_replaced_file(sender, instance, update_fields=None, **kwargs):
     """Note on the video which file this save pushes aside."""
-    setattr(instance, FILE_REPLACED_FLAG, replaced_file_name(instance))
+    setattr(
+        instance,
+        FILE_REPLACED_FLAG,
+        replaced_file_name(instance, update_fields),
+    )
 
 
 @receiver(post_save, sender=Video)
