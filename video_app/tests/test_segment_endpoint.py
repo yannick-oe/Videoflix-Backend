@@ -150,7 +150,7 @@ class SegmentTrailingSlashTests(SegmentTestCase):
         self.assertTrue(self.bare_url().endswith(f"/{SEGMENT_NAME}"))
 
     def test_url_without_a_slash_is_answered_directly(self):
-        """The URL a player builds answers 200 rather than 301."""
+        """The URL a player builds is answered directly."""
         self.assertEqual(self.client.get(self.bare_url()).status_code, 200)
 
     def test_url_without_a_slash_is_not_redirected(self):

@@ -81,7 +81,7 @@ class RejectedUploadTests(TestCase):
         self.assertIn(REJECTED_EXTENSION, errors["thumbnail"][0])
 
     def test_the_message_names_an_extension_that_works(self):
-        """The admin is told what to upload instead."""
+        """The admin is told which extension works."""
         errors = field_errors(build(frame=UNRENDERABLE_FRAME))
         self.assertIn(ALLOWED_FRAME_EXTENSION, errors["thumbnail"][0])
 

@@ -337,7 +337,7 @@ class FailingConversionTests(StoredVideoTestCase):
         self.assertTrue(all(path.exists() for path in survivors))
 
     def test_a_failing_rendition_keeps_its_own_directory_empty(self):
-        """The failing resolution is absent rather than half written."""
+        """The failing resolution leaves no directory behind."""
         self.run_job("480p")
         self.fail_with(FileNotFoundError, FAILING_RESOLUTION)
         self.assertFalse(self.directory(FAILING_RESOLUTION).exists())

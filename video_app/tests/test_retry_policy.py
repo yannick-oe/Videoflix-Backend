@@ -1,4 +1,4 @@
-"""Tests for the jobs that are deliberately not retried."""
+"""Tests for the jobs that are queued without a retry."""
 
 from unittest.mock import patch
 
@@ -11,7 +11,7 @@ VIDEO_ID = 1
 
 
 class UnretriedJobTests(TestCase):
-    """A failing FFmpeg run is not repeated at the worker's cost."""
+    """A failing FFmpeg run is not repeated."""
 
     def enqueue_during(self, action):
         """Return the enqueue mock this action wrote its jobs to."""
