@@ -1,9 +1,12 @@
 django==5.2.17
 djangorestframework==3.17.2
 djangorestframework-simplejwt==5.5.1
+PyJWT==2.13.0
 django-cors-headers==4.9.0
 django-rq==4.1.1
+rq==2.11.0
 django-redis==7.0.0
+redis==8.1.0
 gunicorn==26.0.0
 psycopg2-binary==2.9.12
 python-dotenv==1.2.2
