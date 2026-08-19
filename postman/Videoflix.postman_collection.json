@@ -1,0 +1,1219 @@
+{
+  "info": {
+    "_postman_id": "f20b88a2-f3eb-4dec-b25a-864157695eae",
+    "name": "Videoflix API",
+    "description": "Every endpoint of the Videoflix API, in the order the cookie jar needs.\n\nThe run registers an account of its own under an address built from a timestamp, activates it with the token of the registration response, and logs out at the end, so the collection can be run again without resetting anything.\n\nAuthentication is the cookie jar of Postman and nothing else. No request carries an Authorization header.\n\nA run sends two emails through the SMTP server the .env of the backend points at: the activation email of the registration and the reset email of folder 7.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "noauth"
+  },
+  "item": [
+    {
+      "name": "1 Unauthenticated",
+      "description": "The five requests that are answered before the cookie jar holds anything. They run first so that the jar is still empty.",
+      "item": [
+        {
+          "name": "video list without cookies",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"responds 401 Unauthorized\", function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/video/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "video",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "manifest without cookies",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"responds 401 Unauthorized\", function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/video/1/{{resolution}}/index.m3u8",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "video",
+                "1",
+                "{{resolution}}",
+                "index.m3u8"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "segment without cookies",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"responds 401 Unauthorized\", function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/video/1/{{resolution}}/{{segment}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "video",
+                "1",
+                "{{resolution}}",
+                "{{segment}}",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "token refresh without a refresh cookie",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"responds 400 Bad Request\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/token/refresh/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "token",
+                "refresh",
+                ""
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "logout without a refresh cookie",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"responds 400 Bad Request\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/logout/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "logout",
+                ""
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "2 Registration",
+      "description": "One account per run. Its address is built from a timestamp in the pre-request script of the first request, so the folder needs no cleanup between runs.",
+      "item": [
+        {
+          "name": "register the account of this run",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const stamp = Date.now();",
+                  "pm.collectionVariables.set(\"email\", `videoflix.runner.${stamp}@example.com`);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"responds 201 Created\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "const account = pm.response.json();",
+                  "",
+                  "pm.test(\"the body carries the account and its activation token\", function () {",
+                  "    pm.expect(account.user.email).to.eql(pm.collectionVariables.get(\"email\"));",
+                  "    pm.expect(account.user.id).to.be.a(\"number\");",
+                  "    pm.expect(account.token).to.be.a(\"string\").and.not.empty;",
+                  "});",
+                  "",
+                  "const uidb64 = Buffer.from(String(account.user.id), \"utf8\")",
+                  "    .toString(\"base64\")",
+                  "    .replace(/\\+/g, \"-\")",
+                  "    .replace(/\\//g, \"_\")",
+                  "    .replace(/=+$/, \"\");",
+                  "",
+                  "pm.collectionVariables.set(\"uidb64\", uidb64);",
+                  "pm.collectionVariables.set(\"activation_token\", account.token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/register/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "register",
+                ""
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"{{email}}\",\n    \"password\": \"{{password}}\",\n    \"confirmed_password\": \"{{password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "register with mismatched passwords",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"responds 400 Bad Request\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test(\"the confirmation field carries the error\", function () {",
+                  "    pm.expect(pm.response.json()).to.have.property(\"confirmed_password\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/register/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "register",
+                ""
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"mismatch.{{email}}\",\n    \"password\": \"{{password}}\",\n    \"confirmed_password\": \"{{wrong_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "register the same address twice",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"responds 400 Bad Request\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test(\"the email field carries the error\", function () {",
+                  "    pm.expect(pm.response.json()).to.have.property(\"email\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/register/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "register",
+                ""
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"{{email}}\",\n    \"password\": \"{{password}}\",\n    \"confirmed_password\": \"{{password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "3 Activation",
+      "description": "The account is still inactive, so its login is refused first. The uid is computed from the id of the registration response and the token is taken from that same response.",
+      "item": [
+        {
+          "name": "login before the activation",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"responds 401 Unauthorized\", function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/login/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "login",
+                ""
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"{{email}}\",\n    \"password\": \"{{password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "activate with a corrupted token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"responds 400 Bad Request\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/activate/{{uidb64}}/{{activation_token}}x/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "activate",
+                "{{uidb64}}",
+                "{{activation_token}}x",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "activate the account",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"responds 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"the body reports the activation\", function () {",
+                  "    pm.expect(pm.response.json().message).to.eql(\"Account successfully activated.\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/activate/{{uidb64}}/{{activation_token}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "activate",
+                "{{uidb64}}",
+                "{{activation_token}}",
+                ""
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "4 Login",
+      "description": "The successful login is the request that fills the cookie jar. Everything after it is authenticated by that jar alone.",
+      "item": [
+        {
+          "name": "login with a wrong password",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"responds 401 Unauthorized\", function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/login/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "login",
+                ""
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"{{email}}\",\n    \"password\": \"{{wrong_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "login without a password",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"responds 400 Bad Request\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/login/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "login",
+                ""
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"{{email}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"responds 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"the body names the logged in account\", function () {",
+                  "    pm.expect(pm.response.json().user.username).to.eql(pm.collectionVariables.get(\"email\"));",
+                  "});",
+                  "",
+                  "pm.test(\"both authentication cookies are set\", function () {",
+                  "    pm.expect(pm.cookies.has(\"access_token\")).to.be.true;",
+                  "    pm.expect(pm.cookies.has(\"refresh_token\")).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/login/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "login",
+                ""
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"{{email}}\",\n    \"password\": \"{{password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "5 Authenticated",
+      "description": "The catalogue and the token refresh, both carried by the cookie jar. The two streaming requests address an id the catalogue does not hold.",
+      "item": [
+        {
+          "name": "video list",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"responds 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const videos = pm.response.json();",
+                  "",
+                  "pm.test(\"the list is a bare array\", function () {",
+                  "    pm.expect(videos).to.be.an(\"array\");",
+                  "});",
+                  "",
+                  "pm.test(\"every entry carries the documented fields in order\", function () {",
+                  "    videos.forEach(function (video) {",
+                  "        pm.expect(Object.keys(video)).to.eql([",
+                  "            \"id\",",
+                  "            \"created_at\",",
+                  "            \"title\",",
+                  "            \"description\",",
+                  "            \"thumbnail_url\",",
+                  "            \"category\",",
+                  "        ]);",
+                  "    });",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/video/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "video",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "manifest of a video that does not exist",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"responds 404 Not Found\", function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/video/{{missing_video_id}}/{{resolution}}/index.m3u8",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "video",
+                "{{missing_video_id}}",
+                "{{resolution}}",
+                "index.m3u8"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "segment of a video that does not exist",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"responds 404 Not Found\", function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/video/{{missing_video_id}}/{{resolution}}/{{segment}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "video",
+                "{{missing_video_id}}",
+                "{{resolution}}",
+                "{{segment}}",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "token refresh",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"responds 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"the body carries the renewed access token\", function () {",
+                  "    pm.expect(pm.response.json().access).to.be.a(\"string\").and.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/token/refresh/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "token",
+                "refresh",
+                ""
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "6 Streaming with real media",
+      "description": "These two requests need a converted video. The environment ships video_id empty and both requests then skip their assertions; set it to the id of a converted video to check the 200.",
+      "item": [
+        {
+          "name": "manifest of a converted video",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const videoId = pm.variables.get(\"video_id\");",
+                  "",
+                  "if (!videoId) {",
+                  "    pm.test.skip(\"skipped: set video_id in the environment to reach the manifest\", function () {});",
+                  "} else {",
+                  "    pm.test(\"responds 200 OK\", function () {",
+                  "        pm.response.to.have.status(200);",
+                  "    });",
+                  "",
+                  "    pm.test(\"the manifest carries the documented content type\", function () {",
+                  "        pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(",
+                  "            \"application/vnd.apple.mpegurl\"",
+                  "        );",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/video/{{video_id}}/{{resolution}}/index.m3u8",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "video",
+                "{{video_id}}",
+                "{{resolution}}",
+                "index.m3u8"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "segment of a converted video",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const videoId = pm.variables.get(\"video_id\");",
+                  "",
+                  "if (!videoId) {",
+                  "    pm.test.skip(\"skipped: set video_id in the environment to reach the segment\", function () {});",
+                  "} else {",
+                  "    pm.test(\"responds 200 OK\", function () {",
+                  "        pm.response.to.have.status(200);",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/video/{{video_id}}/{{resolution}}/{{segment}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "video",
+                "{{video_id}}",
+                "{{resolution}}",
+                "{{segment}}",
+                ""
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "7 Password reset",
+      "description": "The reset answers the same 200 for a known and an unknown address. A successful password_confirm cannot be reached from a runner because its token leaves the system by email only, so this folder checks the rejected link.",
+      "item": [
+        {
+          "name": "reset for the address of this run",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"responds 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"the body carries the documented text\", function () {",
+                  "    pm.expect(pm.response.json().detail).to.eql(\"An email has been sent to reset your password.\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/password_reset/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "password_reset",
+                ""
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"{{email}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "reset for an address that does not exist",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"responds 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"the body carries the documented text\", function () {",
+                  "    pm.expect(pm.response.json().detail).to.eql(\"An email has been sent to reset your password.\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/password_reset/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "password_reset",
+                ""
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"{{unknown_email}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "confirm with an invalid uid and token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"responds 400 Bad Request\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test(\"the body reports the unusable link\", function () {",
+                  "    pm.expect(pm.response.json().detail).to.eql(",
+                  "        \"Reset link is invalid or expired.\"",
+                  "    );",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/password_confirm/{{invalid_uidb64}}/{{invalid_token}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "password_confirm",
+                "{{invalid_uidb64}}",
+                "{{invalid_token}}",
+                ""
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"new_password\": \"{{new_password}}\",\n    \"confirm_password\": \"{{new_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "8 Logout",
+      "description": "The logout blacklists the refresh token and clears both cookies, which leaves the jar as empty as the run found it.",
+      "item": [
+        {
+          "name": "logout",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"responds 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"the body reports the logout\", function () {",
+                  "    pm.expect(pm.response.json().detail).to.include(",
+                  "        \"Logout successful!\"",
+                  "    );",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/logout/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "logout",
+                ""
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "email",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "uidb64",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "activation_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "password",
+      "value": "Tr0mbone-Marmalade",
+      "type": "string"
+    },
+    {
+      "key": "wrong_password",
+      "value": "not-the-password",
+      "type": "string"
+    },
+    {
+      "key": "new_password",
+      "value": "Kettle-Rhubarb-91",
+      "type": "string"
+    },
+    {
+      "key": "unknown_email",
+      "value": "nobody.has.this.address@example.com",
+      "type": "string"
+    },
+    {
+      "key": "invalid_uidb64",
+      "value": "invalid",
+      "type": "string"
+    },
+    {
+      "key": "invalid_token",
+      "value": "invalid-token",
+      "type": "string"
+    },
+    {
+      "key": "missing_video_id",
+      "value": "999999",
+      "type": "string"
+    },
+    {
+      "key": "resolution",
+      "value": "480p",
+      "type": "string"
+    },
+    {
+      "key": "segment",
+      "value": "000.ts",
+      "type": "string"
+    }
+  ]
+}
