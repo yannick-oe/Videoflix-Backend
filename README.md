@@ -176,6 +176,12 @@ response bodies that carry a token do so for information only.
 - If the activation email cannot be queued, the account is removed again and
   the request answers `503`, so the address stays free for another attempt.
 
+Neither app carries a `permissions.py`. The seven authentication endpoints
+declare DRF's `AllowAny`, the three video endpoints declare its
+`IsAuthenticated`, which is also the project-wide default in
+`REST_FRAMEWORK["DEFAULT_PERMISSION_CLASSES"]`. No custom permission class was
+needed.
+
 ## Video pipeline
 
 Videos enter the system through the Django admin at
@@ -210,10 +216,18 @@ path against the rendition directory and stream the file. Only
 `media/thumbnails/` is served statically, which is what makes the absolute
 `thumbnail_url` of the video list work in the browser.
 
+`media/thumbnails/` is served without authentication. The auth cookies are set
+with `SameSite=Lax`, and the browser does not attach them to a cross-site image
+load from the frontend origin, so an authenticated thumbnail route would answer
+`401` and every preview would stay blank.
+
 `STORAGES` names the `default` backend as well as the `staticfiles` one even
 though `default` carries Django's own value, because the setting replaces the
 default dictionary instead of merging into it and `StorageHandler` raises
-`InvalidStorageError` for an alias the dictionary does not name.
+`InvalidStorageError` for an alias the dictionary does not name. The delivered
+material prescribes the `STATICFILES_STORAGE` line, which Django 5.1 removed as
+a setting, so its value is read back into the `staticfiles` alias of `STORAGES`
+where Django looks for it now.
 
 `media/` is a named volume and overlays the mounted project directory, so
 uploaded and generated files are invisible on the host. Inspect them in the
@@ -341,6 +355,11 @@ container by a single RQ worker.
 - With `DEBUG=False`, `static()` returns an empty list of routes and the
   thumbnails are no longer served. A real deployment needs a static and media
   server in front of the application.
+- A video is listed by `GET /api/video/` as soon as the admin saves it, before
+  its conversion has finished. Until the three renditions are written — 125.14 s
+  for the sample of the performance table — its `thumbnail_url` is `null` and
+  its manifests answer `404`, and because the list is ordered newest-first the
+  video occupies the hero slot of the frontend for that time.
 
 ## Deviations
 
