@@ -69,10 +69,11 @@ Dokumentation, `POST /api/token/refresh/`)
 **Abweichung:** Die Antwort setzt zusätzlich einen neuen
 `refresh_token`-Cookie. Der Response-Body bleibt exakt der dokumentierte.
 
-**Grund:** Mit `ROTATE_REFRESH_TOKENS` und `BLACKLIST_AFTER_ROTATION` ist der
-Refresh-Token im Cookie des Clients gesperrt, sobald die Antwort geschrieben
-wird, sodass ein alleiniger Access-Cookie den Nutzer beim ersten Refresh
-abmelden würde.
+**Grund:** Die Cookie-Liste der Doku ist für einen rotierenden Aufbau
+unvollständig — mit `ROTATE_REFRESH_TOKENS` und `BLACKLIST_AFTER_ROTATION`
+sperrt der Refresh den mitgesendeten Refresh-Token, sodass ein alleiniger
+Access-Cookie den Client nach dem ersten Refresh mit einem gesperrten
+Refresh-Token zurückließe.
 
 **Rückbau:** `ROTATE_REFRESH_TOKENS = False` setzen und in `RefreshView` nur
 noch den Access-Cookie schreiben.

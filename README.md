@@ -123,9 +123,14 @@ Never commit the filled-in `.env`. The values below are neutral placeholders.
 | `EMAIL_USE_TLS` | whether to use STARTTLS | delivered |
 | `EMAIL_USE_SSL` | whether to use implicit TLS | delivered |
 | `DEFAULT_FROM_EMAIL` | sender address of the outgoing emails | delivered |
-| `FRONTEND_BASE_URL` | base URL the links in the emails point at | delivered |
-| `CORS_ALLOWED_ORIGINS` | comma-separated origins allowed to call the API | delivered |
+| `FRONTEND_BASE_URL` | base URL the links in the emails point at | **added** |
+| `CORS_ALLOWED_ORIGINS` | comma-separated origins allowed to call the API | **added** |
 | `AUTH_COOKIE_SECURE` | whether the auth cookies carry the `Secure` flag | **added** |
+
+The three added variables sit at the end of `.env.template`, behind the blank
+line that closes the delivered blocks. The delivered setup lists no variable
+for the base URL of the frontend and ships no CORS package at all, so both are
+additions of this project.
 
 `AUTH_COOKIE_SECURE` stays `False` for a local HTTP run and belongs on `True`
 wherever the site is served over HTTPS.
@@ -166,6 +171,8 @@ response bodies that carry a token do so for information only.
 - Logout blacklists the refresh token and clears both cookies.
 - Registration creates an inactive account. Activation, and also a completed
   password reset, sets the account active.
+- If the activation email cannot be queued, the account is removed again and
+  the request answers `503`, so the address stays free for another attempt.
 
 ## Video pipeline
 
@@ -271,6 +278,12 @@ activation email of the registration and the reset email of folder 7. The
 password confirmation has no reachable success path from a runner, because its
 token leaves the system by email only, so the collection checks the rejected
 link.
+
+Mailtrap sandboxes on the free plan accept a limited number of messages per
+second, and a full run puts both emails inside that window. The second one is
+then answered with `550 5.7.0`, the job is retried after 30, 120 and 600
+seconds, and the run itself is unaffected: no assertion of the collection
+depends on a delivered email.
 
 ## Tests
 
