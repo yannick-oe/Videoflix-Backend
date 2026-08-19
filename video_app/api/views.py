@@ -3,9 +3,9 @@
 from pathlib import Path
 
 from django.core.exceptions import SuspiciousFileOperation
+from django.core.files.storage import FileSystemStorage
 from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404
-from django.utils._os import safe_join
 from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
@@ -23,7 +23,7 @@ def rendition_file(video_id, resolution, name):
     """Return the path of one file inside a rendition directory."""
     directory = video_directory(video_id) / resolution
     try:
-        return Path(safe_join(directory, name))
+        return Path(FileSystemStorage(location=directory).path(name))
     except SuspiciousFileOperation as error:
         raise Http404(NOT_FOUND_MESSAGE) from error
 
