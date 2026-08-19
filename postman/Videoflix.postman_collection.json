@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "f20b88a2-f3eb-4dec-b25a-864157695eae",
     "name": "Videoflix API",
-    "description": "Every endpoint of the Videoflix API, in the order the cookie jar needs.\n\nThe run registers an account of its own under an address built from a timestamp, activates it with the token of the registration response, and logs out at the end, so the collection can be run again without resetting anything.\n\nAuthentication is the cookie jar of Postman and nothing else. No request carries an Authorization header.\n\nA run sends two emails through the SMTP server the .env of the backend points at: the activation email of the registration and the reset email of folder 7.",
+    "description": "Every endpoint of the Videoflix API, in the order the cookie jar needs.\n\nThe run registers an account of its own under an address built from a timestamp, activates it with the token of the registration response, and logs out at the end. The collection can be run again without resetting anything.\n\nAuthentication is the cookie jar of Postman and nothing else. No request carries an Authorization header.\n\nA run sends two emails through the SMTP server the .env of the backend points at: the activation email of the registration and the reset email of folder 7.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -11,7 +11,7 @@
   "item": [
     {
       "name": "1 Unauthenticated",
-      "description": "The five requests that are answered before the cookie jar holds anything. They run first so that the jar is still empty.",
+      "description": "The five requests that are answered before the cookie jar holds anything.",
       "item": [
         {
           "name": "video list without cookies",
@@ -211,7 +211,7 @@
     },
     {
       "name": "2 Registration",
-      "description": "One account per run. Its address is built from a timestamp in the pre-request script of the first request, so the folder needs no cleanup between runs.",
+      "description": "One account per run. Its address is built from a timestamp in the pre-request script of the first request.",
       "item": [
         {
           "name": "register the account of this run",
@@ -390,7 +390,7 @@
     },
     {
       "name": "3 Activation",
-      "description": "The account is still inactive, so its login is refused first. The uid is computed from the id of the registration response and the token is taken from that same response.",
+      "description": "The account is still inactive and its login is refused first. The uid is computed from the id of the registration response and the token is taken from that same response.",
       "item": [
         {
           "name": "login before the activation",
@@ -937,7 +937,7 @@
     },
     {
       "name": "7 Password reset",
-      "description": "The reset answers the same 200 for a known and an unknown address. A successful password_confirm cannot be reached from a runner because its token leaves the system by email only, so this folder checks the rejected link.",
+      "description": "The reset answers the same 200 for a known and an unknown address. The confirm token leaves the system by email only; this folder checks the rejected link.",
       "item": [
         {
           "name": "reset for the address of this run",
