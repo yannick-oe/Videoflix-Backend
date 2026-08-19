@@ -11,7 +11,7 @@ known-first-party = ["core", "auth_app", "video_app"]
 
 [tool.coverage.run]
 source = ["auth_app", "video_app", "core"]
-omit = ["*/migrations/*", "*/tests/*", "core/wsgi.py", "core/asgi.py"]
+omit = ["*/migrations/*", "*/tests/*"]
 
 [tool.coverage.report]
 fail_under = 100
